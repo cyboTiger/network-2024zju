@@ -1,0 +1,6 @@
+Log file created at: 2024/12/01 22:25:24
+Running on machine: xiaohu
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I1201 22:25:24.802151 18135 client.cpp:51] [Info] Connected to server at 127.0.0.1:3538
+I1201 22:25:24.802347 18135 client.cpp:54] Receiving message from server: 
+I1201 22:25:24.803174 18135 client.cpp:59] [Info] Message from server: hello, client from server!

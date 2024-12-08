@@ -1,0 +1,135 @@
+Log file created at: 2024/12/01 22:30:10
+Running on machine: xiaohu
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I1201 22:30:10.303733 18961 server.cpp:69] [Info] Listening to connection requests...
+I1201 22:30:46.604738 18961 server.cpp:78] [Info] Client 127.0.0.1:56757 has connected
+I1201 22:30:46.604913 19024 server.cpp:34] [Info] Sending message to client 5
+I1201 22:30:46.605185 18961 server.cpp:78] [Info] Client 127.0.0.1:58293 has connected
+I1201 22:30:46.605295 19026 server.cpp:34] [Info] Sending message to client 6
+I1201 22:30:46.606149 18961 server.cpp:78] [Info] Client 127.0.0.1:59317 has connected
+I1201 22:30:46.606868 18961 server.cpp:78] [Info] Client 127.0.0.1:59829 has connected
+I1201 22:30:46.606900 19030 server.cpp:34] [Info] Sending message to client 5
+I1201 22:30:46.606990 19032 server.cpp:34] [Info] Sending message to client 6
+I1201 22:30:46.608450 18961 server.cpp:78] [Info] Client 127.0.0.1:61365 has connected
+I1201 22:30:46.608541 18961 server.cpp:78] [Info] Client 127.0.0.1:65461 has connected
+I1201 22:30:46.608553 19036 server.cpp:34] [Info] Sending message to client 5
+I1201 22:30:46.608609 19037 server.cpp:34] [Info] Sending message to client 6
+I1201 22:30:46.608879 18961 server.cpp:78] [Info] Client 127.0.0.1:2486 has connected
+I1201 22:30:46.608965 19038 server.cpp:34] [Info] Sending message to client 5
+I1201 22:30:46.609109 18961 server.cpp:78] [Info] Client 127.0.0.1:5558 has connected
+I1201 22:30:46.609176 19041 server.cpp:34] [Info] Sending message to client 6
+I1201 22:30:46.610000 18961 server.cpp:78] [Info] Client 127.0.0.1:7606 has connected
+I1201 22:30:46.610087 19044 server.cpp:34] [Info] Sending message to client 5
+I1201 22:30:46.612228 18961 server.cpp:78] [Info] Client 127.0.0.1:11190 has connected
+I1201 22:30:46.612372 19048 server.cpp:34] [Info] Sending message to client 6
+I1201 22:30:46.612964 18961 server.cpp:78] [Info] Client 127.0.0.1:15286 has connected
+I1201 22:30:46.613052 19051 server.cpp:34] [Info] Sending message to client 5
+I1201 22:30:46.614056 18961 server.cpp:78] [Info] Client 127.0.0.1:17334 has connected
+I1201 22:30:46.614123 18961 server.cpp:78] [Info] Client 127.0.0.1:17846 has connected
+I1201 22:30:46.614138 19053 server.cpp:34] [Info] Sending message to client 6
+I1201 22:30:46.614178 19054 server.cpp:34] [Info] Sending message to client 5
+I1201 22:30:46.614434 18961 server.cpp:78] [Info] Client 127.0.0.1:21430 has connected
+I1201 22:30:46.614503 18961 server.cpp:78] [Info] Client 127.0.0.1:20918 has connected
+I1201 22:30:46.614527 19056 server.cpp:34] [Info] Sending message to client 7
+I1201 22:30:46.614573 19058 server.cpp:34] [Info] Sending message to client 5
+I1201 22:30:46.616318 18961 server.cpp:78] [Info] Client 127.0.0.1:24502 has connected
+I1201 22:30:46.616516 19064 server.cpp:34] [Info] Sending message to client 6
+I1201 22:30:46.616992 18961 server.cpp:78] [Info] Client 127.0.0.1:25014 has connected
+I1201 22:30:46.617455 19065 server.cpp:34] [Info] Sending message to client 5
+I1201 22:30:46.617492 18961 server.cpp:78] [Info] Client 127.0.0.1:28086 has connected
+I1201 22:30:46.617625 19066 server.cpp:34] [Info] Sending message to client 6
+I1201 22:30:46.617877 18961 server.cpp:78] [Info] Client 127.0.0.1:28598 has connected
+I1201 22:30:46.618110 19067 server.cpp:34] [Info] Sending message to client 5
+I1201 22:30:46.618573 18961 server.cpp:78] [Info] Client 127.0.0.1:29110 has connected
+I1201 22:30:46.618708 19068 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:07.657030 18961 server.cpp:78] [Info] Client 127.0.0.1:35766 has connected
+I1201 22:31:07.657109 18961 server.cpp:78] [Info] Client 127.0.0.1:32182 has connected
+I1201 22:31:07.657130 19148 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:07.657431 19149 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:07.657835 18961 server.cpp:78] [Info] Client 127.0.0.1:39862 has connected
+I1201 22:31:07.657932 19152 server.cpp:34] [Info] Sending message to client 7
+I1201 22:31:07.658581 18961 server.cpp:78] [Info] Client 127.0.0.1:40374 has connected
+I1201 22:31:07.658870 19154 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:07.660137 18961 server.cpp:78] [Info] Client 127.0.0.1:41398 has connected
+I1201 22:31:07.660527 18961 server.cpp:78] [Info] Client 127.0.0.1:43958 has connected
+I1201 22:31:07.660571 19157 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:07.660645 19158 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:07.661823 18961 server.cpp:78] [Info] Client 127.0.0.1:50614 has connected
+I1201 22:31:07.661917 19163 server.cpp:34] [Info] Sending message to client 7
+I1201 22:31:07.661970 18961 server.cpp:78] [Info] Client 127.0.0.1:48054 has connected
+I1201 22:31:07.662045 19164 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:07.662343 18961 server.cpp:78] [Info] Client 127.0.0.1:51126 has connected
+I1201 22:31:07.662473 19167 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:07.662678 18961 server.cpp:78] [Info] Client 127.0.0.1:52150 has connected
+I1201 22:31:07.662819 19168 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:07.665453 18961 server.cpp:78] [Info] Client 127.0.0.1:53686 has connected
+I1201 22:31:07.665840 19171 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:07.666263 18961 server.cpp:78] [Info] Client 127.0.0.1:54198 has connected
+I1201 22:31:07.666456 19172 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:07.668757 18961 server.cpp:78] [Info] Client 127.0.0.1:55222 has connected
+I1201 22:31:07.669060 19176 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:07.671718 18961 server.cpp:78] [Info] Client 127.0.0.1:56246 has connected
+I1201 22:31:07.672542 19180 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:07.673535 18961 server.cpp:78] [Info] Client 127.0.0.1:59830 has connected
+I1201 22:31:07.673790 18961 server.cpp:78] [Info] Client 127.0.0.1:63926 has connected
+I1201 22:31:07.673825 19183 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:07.674240 19184 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:07.674329 18961 server.cpp:78] [Info] Client 127.0.0.1:65462 has connected
+I1201 22:31:07.674665 19185 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:07.674772 18961 server.cpp:78] [Info] Client 127.0.0.1:951 has connected
+I1201 22:31:07.675179 19186 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:07.675364 18961 server.cpp:78] [Info] Client 127.0.0.1:2487 has connected
+I1201 22:31:07.675606 19187 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:07.677433 18961 server.cpp:78] [Info] Client 127.0.0.1:5559 has connected
+I1201 22:31:07.677793 19188 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:26.545697 18961 server.cpp:78] [Info] Client 127.0.0.1:2991 has connected
+I1201 22:31:26.545872 19262 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:26.547441 18961 server.cpp:78] [Info] Client 127.0.0.1:3503 has connected
+I1201 22:31:26.547534 19272 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:26.547916 18961 server.cpp:78] [Info] Client 127.0.0.1:11183 has connected
+I1201 22:31:26.547986 18961 server.cpp:78] [Info] Client 127.0.0.1:7599 has connected
+I1201 22:31:26.548030 19274 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:26.548049 19275 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:26.548485 18961 server.cpp:78] [Info] Client 127.0.0.1:14255 has connected
+I1201 22:31:26.548589 19278 server.cpp:34] [Info] Sending message to client 7
+I1201 22:31:26.549746 18961 server.cpp:78] [Info] Client 127.0.0.1:20911 has connected
+I1201 22:31:26.549818 19281 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:26.550621 18961 server.cpp:78] [Info] Client 127.0.0.1:17839 has connected
+I1201 22:31:26.550698 19287 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:26.551019 18961 server.cpp:78] [Info] Client 127.0.0.1:26031 has connected
+I1201 22:31:26.551115 19289 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:26.551333 18961 server.cpp:78] [Info] Client 127.0.0.1:23471 has connected
+I1201 22:31:26.551412 18961 server.cpp:78] [Info] Client 127.0.0.1:27055 has connected
+I1201 22:31:26.551455 19292 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:26.551501 19293 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:26.551549 18961 server.cpp:78] [Info] Client 127.0.0.1:26543 has connected
+I1201 22:31:26.551633 18961 server.cpp:78] [Info] Client 127.0.0.1:24495 has connected
+I1201 22:31:26.551641 19294 server.cpp:34] [Info] Sending message to client 7
+I1201 22:31:26.551709 19295 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:26.551790 18961 server.cpp:78] [Info] Client 127.0.0.1:29615 has connected
+I1201 22:31:26.551864 19296 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:26.553972 18961 server.cpp:78] [Info] Client 127.0.0.1:33711 has connected
+I1201 22:31:26.554091 19302 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:26.554476 18961 server.cpp:78] [Info] Client 127.0.0.1:35759 has connected
+I1201 22:31:26.554574 19305 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:26.554611 18961 server.cpp:78] [Info] Client 127.0.0.1:39343 has connected
+I1201 22:31:26.554692 19306 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:26.555014 18961 server.cpp:78] [Info] Client 127.0.0.1:41391 has connected
+I1201 22:31:26.555094 19307 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:26.555517 18961 server.cpp:78] [Info] Client 127.0.0.1:42415 has connected
+I1201 22:31:26.555634 19308 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:26.556025 18961 server.cpp:78] [Info] Client 127.0.0.1:44463 has connected
+I1201 22:31:26.556142 19309 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:26.556582 18961 server.cpp:78] [Info] Client 127.0.0.1:45487 has connected
+I1201 22:31:26.556674 19310 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:28.063278 18961 server.cpp:78] [Info] Client 127.0.0.1:49071 has connected
+I1201 22:31:28.063403 19331 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:28.063671 18961 server.cpp:78] [Info] Client 127.0.0.1:51119 has connected
+I1201 22:31:28.063751 19333 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:28.064095 18961 server.cpp:78] [Info] Client 127.0.0.1:54191 has connected
+I1201 22:31:28.064191 19335 server.cpp:34] [Info] Sending message to client 6
+I1201 22:31:28.064435 18961 server.cpp:78] [Info] Client 127.0.0.1:52655 has connected
+I1201 22:31:28.064531 19338 server.cpp:34] [Info] Sending message to client 5
+I1201 22:31:28.065743 18961 server.cpp:78] [Info] Client 127.0.0.1:56751 has connected
+I1201 22:31:28.065804 18961 server.cpp:78] [Info] Client 127.0.0.1:57263 has connected
+I1201 22:31:28.065850 19342 server.cpp:34] [Info] S
