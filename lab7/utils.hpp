@@ -13,19 +13,21 @@
 #include <mutex>
 #include <condition_variable>
 #include <queue>
+#include <ctime>
+#include <csignal> // exit signal handling
+#include <cerrno> // 包含 errno 和 strerror
+#include <poll.h>
 
 // 定义服务端地址和端口
 #define SERVER_ADDRESS "127.0.0.1"
 #define SERVER_PORT 3537
-#define CLIENT_ADDRESS "127.0.0.1"
-#define CLIENT_PORT 5678
 
 class GlogWrapper
 { // 封装Glog
 public:
-    GlogWrapper(char *program)
-    {
-        google::InitGoogleLogging(program);
+    void set_name(char *program) {google::InitGoogleLogging(program);}
+    GlogWrapper()
+    {    
         FLAGS_log_dir = "glog";         // 设置log文件保存路径及前缀
         FLAGS_alsologtostderr = true;           // 设置日志消息除了日志文件之外是否去标准输出
         FLAGS_colorlogtostderr = true;          // 设置记录到标准输出的颜色消息（如果终端支持）
@@ -34,7 +36,7 @@ public:
         google::InstallFailureSignalHandler();
     }
     ~GlogWrapper() { google::ShutdownGoogleLogging(); }
-};
+}glog;
 
 struct packet;
 size_t Serialize(char* buf, packet& pkt);
@@ -71,14 +73,14 @@ struct packet{
     void set_num(size_t num) { field_num = num; } 
     void set_field(std::string field_name, std::string field_value) {
         if (field_map.find(field_name) != field_map.end()) {
-            LOG(INFO) << "[Info] already set this field!";
+            std::cout << "[Info] already set this field!" << std::endl;
             return;
         }
         field_map[field_name] = field_value;
     }
     std::string get_field(std::string field_name) {
         if (field_map.find(field_name) == field_map.end()) {
-            LOG(INFO) << "[Info] field doesn't exist!";
+            std::cout << "[Info] field doesn't exist!" << std::endl;
             return "";
         }
         return this->field_map[field_name];
@@ -90,44 +92,162 @@ struct mySocket
     int fd;
     struct sockaddr_in hostAddress;
     socklen_t hostAddressLength;
+    enum role{
+        server, 
+        client
+    } type;
+    std::vector<int> client_fd_list;
 
-    // merely ctor
+
+    // client (ctor)
     mySocket() {
         fd = socket(AF_INET, SOCK_STREAM, 0);
+
+        type = role::client;
         LOG_IF(FATAL, fd < 0) << "[Error] Failed to create socket";
     }
-    // ctor and binding
+    // server (ctor and addr binding)
     mySocket(struct sockaddr_in hostAddress) :
     hostAddress(hostAddress), hostAddressLength(hostAddressLength) 
     {
         fd = socket(AF_INET, SOCK_STREAM, 0);
+
+        type = role::server;
         LOG_IF(FATAL, fd < 0) << "[Error] Failed to create socket";
         LOG_IF(FATAL, bind(fd, (struct sockaddr*)&hostAddress, sizeof(hostAddress)) < 0)
             << "[Error] Binding failed";  
     }
     ~mySocket() {close(fd);}
 
-    void mconnect(struct sockaddr_in hostAddress) {
-        LOG_IF(FATAL, connect(fd, (sockaddr*)&hostAddress, sizeof(hostAddress)) < 0) 
+    void mconnect(struct sockaddr_in *hostAddress) {
+        LOG_IF(FATAL, connect(fd, (struct sockaddr*)hostAddress, sizeof(struct sockaddr_in)) < 0) 
             << "[Error] Failed to connect";
-        LOG(INFO) << "[Info] Connected to server at " 
-        << SERVER_ADDRESS << ":" << SERVER_PORT;
+        std::cout << "[Info] Connected to server at " 
+        << std::string(inet_ntoa(hostAddress->sin_addr)) << ":" << ntohs(hostAddress->sin_port) << std::endl;
     }
+    
+    // *FOR CLIENT* send PKT, return sent length(in bytes)
     size_t msend(packet& pkt) {
-        char buf[2048];
+        if (!isConnected(fd)) {
+            std::cerr << "[Error] Socket is not connected!" << std::endl;
+            return -1;
+        }
+        char buf[2048] = {0};
         size_t len = Serialize(buf, pkt);
-        send(fd, buf, len, 0);
+        std::cout << std::endl << "-------------sending-------------" << std::endl;
+        len = send(fd, buf, len, 0);
+        std::cout << "send length:" << len << std::endl;
+        std::cout << "---------------over--------------" << std::endl << std::endl;
         return len;
     }
-    packet mrecv() {
+
+    // *FOR SERVER* send PKT, return sent length(in bytes)
+    size_t msend(packet& pkt, int client_fd) {
+        if (!isConnected(client_fd)) {
+            std::cerr << "[Error] Socket is not connected!" << std::endl;
+            return -1;
+        }
         char buf[2048] = {0};
-        recv(fd, buf, sizeof(buf)-1, 0);
-        packet pkt;
-        Deserialize(buf, pkt);
-        return pkt;
+        size_t len = Serialize(buf, pkt);
+        std::cout << std::endl << "-------------sending-------------" << std::endl;
+        len = send(client_fd, buf, len, 0);
+        std::cout << "send length:" << len << std::endl;
+        std::cout << "---------------over--------------" << std::endl << std::endl;
+        return len;
+    }
+
+
+    // debug
+    bool isConnected(int sockfd) {
+        int error = 0;
+        socklen_t len = sizeof(error);
+        if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
+            // debug info
+            std::cerr << "[Error] getsockopt failed! errno: " << strerror(errno) << std::endl;
+            return false;
+        }
+        return error == 0;
+    }
+
+    // check if there is data to receive
+    bool has_data_poll(int sockfd) {
+        struct pollfd fds;
+        fds.fd = sockfd;
+        fds.events = POLLIN;
+
+        int ret = poll(&fds, 1, 0);
+
+        if (ret == -1) {
+            std::cerr << "[Error] poll failed!" << " errno: " << strerror(errno) << std::endl;
+            return false;
+        } else if (ret == 0) {
+            // No data available
+            return false;
+        } else {
+            // Data available
+            return true;
+        }
+    }
+
+
+    // *FOR CLIENT* receive and store packet into PKT, return received length(in bytes)
+    size_t mrecv(packet& pkt) {
+        if (!isConnected(fd)) {
+            std::cerr << "[Error] Socket is not connected!" << std::endl;
+            return -1;
+        }
+        
+        if(!has_data_poll(fd)) return 0; // check if there is data to receive
+
+        char buf[2048] = {0};
+        ssize_t len = recv(fd, buf, sizeof(buf) - 1, 0);
+        
+        if(len < 0) {
+            std::cout << "[Error] receive failed!" << "errno: " << strerror(errno) << std::endl;
+        } else {
+            std::cout << std::endl << "--------------receive--------------" << std::endl;
+            std::cout << "recv length:" << len << std::endl;
+            Deserialize(buf, pkt);
+        }
+        std::cout << "---------------over----------------" << std::endl << std::endl;
+        return len;
+    }
+    // *FOR SERVER* receive and store packet into PKT, return received length(in bytes)
+    size_t mrecv(packet& pkt, int client_fd) {
+        if (!isConnected(client_fd)) {
+            std::cerr << "[Error] Socket is not connected!" << std::endl;
+            return -1;
+        }
+
+        if(!has_data_poll(client_fd)) return 0; // check if there is data to receive
+
+        char buf[2048] = {0};
+        ssize_t len = recv(client_fd, buf, sizeof(buf) - 1, 0);
+        
+        if(len < 0) {
+            std::cout << "[Error] receive failed!" << "errno: " << strerror(errno) << std::endl;
+        } else {
+            std::cout << std::endl << "--------------receive--------------" << std::endl;
+            std::cout << "recv from client " << client_fd << std::endl;
+            std::cout << "recv length:" << len << std::endl;
+            Deserialize(buf, pkt);
+        }
+        std::cout << "---------------over----------------" << std::endl << std::endl;
+        return len;
+    }
+
+
+    mySocket& operator >> (packet& pkt) {
+        mrecv(pkt);
+        return *this;
+    }
+    mySocket& operator << (packet pkt) {
+        msend(pkt);
+        return *this;
     }
 };
 
+// serialize PKT into BUF, return serialized length(in bytes)
 size_t Serialize(char* buf, packet& pkt) {
     size_t len = 0;
 
@@ -155,6 +275,7 @@ size_t Serialize(char* buf, packet& pkt) {
     return len;
 }
 
+// deserialize BUF into PKT
 void Deserialize(char* buf, packet& pkt) {
     pkt_t type;
     memcpy(&type, buf, sizeof(type));
