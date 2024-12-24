@@ -1,12 +1,13 @@
 all: server client
 
 obj = server client
+CFLAG = -lglog -lpthread -std=c++17
 
-server: server.cpp
-	g++ server.cpp -o server -lglog -lpthread
+server: server.cpp server.hpp utils.hpp 
+	g++ server.cpp -o server $(CFLAG)
 
-client: client.cpp
-	g++ client.cpp -o client -lglog -lpthread
+client: client.cpp client.hpp utils.hpp
+	g++ client.cpp -o client $(CFLAG)
 
 clean:
 	rm $(obj)

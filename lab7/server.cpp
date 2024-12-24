@@ -4,7 +4,7 @@ void funcHandler1(packet& pkt_send);
 void funcHandler2(packet& pkt_send);
 void funcHandler3(packet& pkt_send);
 void funcHandler4(packet& pkt_send);
-void funcHandler5(packet& pkt_send);
+void funcHandler5(packet& pkt_send, int result);
 void funcHandler6(packet& pkt_send, mySocket& skt);
 
 int main(int argc, char* argv[]) {
@@ -64,25 +64,36 @@ void clientHandler(mySocket &server, int client_fd) {
 
         case pkt_t::req_Exit:
             funcHandler3(pkt_send);
+            server.munconnect(client_fd);
             close(client_fd);
             std::cout << "[Info] Client " 
             << client_fd << " has exited" << std::endl;
             return;
         case pkt_t::req_Unconnect:
             funcHandler4(pkt_send);
-            close(client_fd);
+            server.munconnect(client_fd);
             std::cout << "[Info] Client " 
             << client_fd << " has unconnected" << std::endl;
             return;
         case pkt_t::req_Msg:
-            funcHandler5(pkt_send);
+            funcHandler5(pkt_send, std::find(server.client_fd_list.begin(), server.client_fd_list.end(), std::stoi(pkt_recv.get_field("to"))) != server.client_fd_list.end());
             server.msend(pkt_send, client_fd);
+            if(pkt_send.field_map["result"] == "success") {
+                pkt_recv.set_num(pkt_recv.field_num+1);
+                pkt_recv.set_field("from", std::to_string(client_fd));
+                server.msend(pkt_recv, std::stoi(pkt_recv.get_field("to")));
+            }
             break;
         case pkt_t::req_ClientList:
             funcHandler6(pkt_send, server);
             server.msend(pkt_send, client_fd);
             break;
-        
+        case pkt_t::req_SelfFd:
+            pkt_send.set_type(pkt_t::res);
+            pkt_send.set_num(1);
+            pkt_send.set_field("self_fd", std::to_string(client_fd));
+            server.msend(pkt_send, client_fd);
+            break;
         case pkt_t::res:
             break;
         default:
@@ -115,10 +126,10 @@ void funcHandler4(packet& pkt_send) {
     pkt_send.set_num(1);
     pkt_send.set_field("unconnnect", "success");
 }
-void funcHandler5(packet& pkt_send) {
+void funcHandler5(packet& pkt_send, int result) {
     pkt_send.set_type(pkt_t::res);
     pkt_send.set_num(1);
-    pkt_send.set_field("message", "received");
+    pkt_send.set_field("result", result ? "success" : "fail");
 }
 void funcHandler6(packet& pkt_send, mySocket &skt) {
     pkt_send.set_type(pkt_t::res);

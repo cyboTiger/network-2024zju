@@ -5,8 +5,11 @@ void produce(mySocket& skt);
 void consume(packet &pkt);
 void exitHandler(int signal);
 void print_pkt_info(packet &pkt);
+void reconnect(mySocket& skt);
 bool should_exit = false;
-std::mutex print_mtx;
+bool should_reconnect = false;
+std::mutex waitMtx;
+std::condition_variable waitCond;
 std::map<pkt_t, std::string> packet_type_name = {
     std::make_pair(pkt_t::req_ClientList, "request-ClientList"), 
     std::make_pair(pkt_t::req_Exit, "request-Exit"),
@@ -16,14 +19,16 @@ std::map<pkt_t, std::string> packet_type_name = {
     std::make_pair(pkt_t::req_Unconnect, "request-Unconnect"),
     std::make_pair(pkt_t::res, "response")
     };
-std::map<std::string, pkt_t> number_packet_type = {
-    std::make_pair("4", pkt_t::req_ClientList), 
-    std::make_pair("6", pkt_t::req_Exit),
-    std::make_pair("5", pkt_t::req_Msg),
-    std::make_pair("3", pkt_t::req_ServerName),
-    std::make_pair("2", pkt_t::req_Time),
-    std::make_pair("1", pkt_t::req_Unconnect),
-    std::make_pair("7", pkt_t::res)
+std::map<std::string, pkt_t> command_packet_type = {
+    std::make_pair("ls", pkt_t::req_ClientList), 
+    std::make_pair("exit", pkt_t::req_Exit),
+    std::make_pair("msg", pkt_t::req_Msg),
+    std::make_pair("name", pkt_t::req_ServerName),
+    std::make_pair("time", pkt_t::req_Time),
+    std::make_pair("t", pkt_t::req_Time),
+    std::make_pair("unconnect", pkt_t::req_Unconnect),
+    std::make_pair("response", pkt_t::res),
+    std::make_pair("res", pkt_t::res)
     };
 
 
@@ -43,6 +48,10 @@ int main(int argc, char *argv[])
     set_SocketAddr(&serverAddress, SERVER_PORT, SERVER_ADDRESS);
     // connnect to server
     client.mconnect(&serverAddress);
+    std::cout << "available command: " << std::endl;
+    for (auto &[key, value] : command_packet_type) {
+        std::cout << "- " << key << ": " << packet_type_name[value] << std::endl;
+    }
     // recv threads
     std::vector<std::thread> threads;
     packet pkt_recv;
@@ -64,14 +73,38 @@ void sendInput(mySocket &skt) {
         std::cout << "client> ";
         std::getline(std::cin, input);
 
-        if (input == "q" || number_packet_type[input] == pkt_t::req_Exit
-            || number_packet_type[input] == pkt_t::req_Unconnect) {
+        if (input == "reconnect") {
+            reconnect(skt);
+            continue;
+        }
+        if (input == "u" || command_packet_type[input] == pkt_t::req_Unconnect) {
+            pkt.set_type(req_Unconnect);
+            skt.msend(pkt);
+            skt.munconnect();
+            continue;
+        }
+        if (input == "me") {
+            pkt.set_type(req_SelfFd);
+            skt.msend(pkt);
+            continue;
+        }
+        if (input == "q" || command_packet_type[input] == pkt_t::req_Exit) {
             pkt.set_type(req_Exit);
             skt.msend(pkt);
             exitHandler(SIGINT);
             break;
         }
-        pkt.type = number_packet_type[input]; // 设置消息类型
+        if (input == "msg") {
+            std::cout << "Sending message to which client: ";
+            int recv_fd;
+            std::cin >> recv_fd;
+            pkt.set_type(pkt_t::req_Msg); // 设置消息类型
+            pkt.set_num(1);
+            pkt.set_field("to", std::to_string(recv_fd));
+            skt.msend(pkt);
+            continue;
+        }
+        pkt.set_type(command_packet_type[input]); // 设置消息类型
         skt.msend(pkt);
     }
 
@@ -84,6 +117,15 @@ void produce(mySocket &skt) {
 
         // Receive packet
         len = skt.mrecv(pkt);
+        if (len == -1) {
+            std::cout << "Unconnected!" << std::endl;
+            // Wait for reconnection or exit signal
+            std::unique_lock<std::mutex> waitLock(waitMtx);
+            while (!should_reconnect && !should_exit) {
+                waitCond.wait(waitLock);
+            }
+            continue;
+        }
         if (len == 0) {
             continue;
         }
@@ -130,31 +172,42 @@ void print_pkt_info(packet &pkt) {
     }
 
     // Calculate the total width of the box
-    size_t total_width = (max_name_length + max_value_length + 4) > 30 ? 
-                        (max_name_length + max_value_length + 4) : 30; // 4 for padding and separators
+    size_t total_width = (max_name_length + max_value_length + 6) > 40 ? 
+                        (max_name_length + max_value_length + 6) : 40; // 4 for padding and separators
 
     // Print the top border of the box
     std::cout << std::string(total_width, '-') << std::endl;
 
     // Print the packet information
     std::cout << "| Info: New packet with " << pkt.field_num << " fields! " 
-              << std::setw(total_width - 29) << "|" << std::endl; // Adjust width for the message
+              << std::setw(total_width - 34) << "|" << std::endl; // Adjust width for the message
     std::cout << std::string(total_width, '-') << std::endl;
 
     std::cout << "| Packet type: " << packet_type_name[pkt.type]
-              << std::setw(total_width - 13 - packet_type_name[pkt.type].length()) << "|" << std::endl; // Adjust width for the packet type
+              << std::setw(total_width - 15 - packet_type_name[pkt.type].length()) << "|" << std::endl; // Adjust width for the packet type
     std::cout << std::string(total_width, '-') << std::endl;
 
     for (const auto & [name, val] : pkt.field_map) {
         std::cout << "| " << std::left << std::setw(max_name_length) << name 
                   << " : " << std::left << std::setw(max_value_length) << val 
-                  << " |" << std::endl;
+                  << std::right << std::setw(total_width-max_name_length-max_value_length - 5) << "|" << std::endl;
     }
 
     // Print the bottom border of the box
     std::cout << std::string(total_width, '-') << std::endl;
 }
 
+void reconnect(mySocket &skt) {
+    std::cout << "Reconnecting..." << std::endl;
+    struct sockaddr_in serverAddress;
+    // set server addr
+    set_SocketAddr(&serverAddress, SERVER_PORT, SERVER_ADDRESS);
+    skt.mconnect(&serverAddress);
+
+    std::lock_guard<std::mutex> lock(waitMtx);
+    should_reconnect = true;
+    waitCond.notify_all();
+}
 void exitHandler(int signal) {
     should_exit = true;
 
