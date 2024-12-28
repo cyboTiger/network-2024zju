@@ -42,7 +42,8 @@ int main(int argc, char* argv[]) {
 
 void clientHandler(mySocket &server, int client_fd) {
     char buf[4096] = {0};
-    while(1) {
+    bool shouldExit = false;
+    while(!shouldExit) {
         recv(client_fd, buf, sizeof(buf)-1, 0);
         std::string buf_str(buf);
         size_t pos1 = buf_str.find_first_of("\r\n");
@@ -53,7 +54,7 @@ void clientHandler(mySocket &server, int client_fd) {
         res += req_header;
         res += req_line;
         send(client_fd, res.c_str(), res.length(), 0);
-        
+        shouldExit = true;
     } 
     close(client_fd); 
 }
