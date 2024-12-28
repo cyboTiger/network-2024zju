@@ -1,16 +1,19 @@
 #include "client.hpp"
 
+void send100(mySocket& skt);
 void sendInput(mySocket &skt);
 void produce(mySocket& skt);
 void consume(packet &pkt);
 void exitHandler(int signal);
 void print_pkt_info(packet &pkt);
-void reconnect(mySocket& skt);
+void myconnect(mySocket &skt, std::string addr, int port);
+
 bool should_exit = false;
-bool should_reconnect = false;
+bool is_connected = false;
 std::mutex waitMtx;
 std::condition_variable waitCond;
 std::map<pkt_t, std::string> packet_type_name = {
+    std::make_pair(pkt_t::Connect, "connect"),
     std::make_pair(pkt_t::req_ClientList, "request-ClientList"), 
     std::make_pair(pkt_t::req_Exit, "request-Exit"),
     std::make_pair(pkt_t::req_Msg, "request-Msg"),
@@ -20,6 +23,7 @@ std::map<pkt_t, std::string> packet_type_name = {
     std::make_pair(pkt_t::res, "response")
     };
 std::map<std::string, pkt_t> command_packet_type = {
+    std::make_pair("connect", pkt_t::Connect), 
     std::make_pair("ls", pkt_t::req_ClientList), 
     std::make_pair("exit", pkt_t::req_Exit),
     std::make_pair("msg", pkt_t::req_Msg),
@@ -40,30 +44,40 @@ int main(int argc, char *argv[])
     signal(SIGINT,  exitHandler); // Ctrl + C
     signal(SIGQUIT, exitHandler); // Ctrl + '\'
     signal(SIGHUP,  exitHandler); // current user log off
+
+    std::vector<std::thread> threads;
     int clientSocket;
     struct sockaddr_in serverAddress, clientAddress;
     // create socket
     mySocket client;
-    // set server addr
-    set_SocketAddr(&serverAddress, SERVER_PORT, SERVER_ADDRESS);
-    // connnect to server
-    client.mconnect(&serverAddress);
+    threads.push_back(std::thread(sendInput, std::ref(client)));
+    
+    
     std::cout << "available command: " << std::endl;
     for (auto &[key, value] : command_packet_type) {
         std::cout << "- " << key << ": " << packet_type_name[value] << std::endl;
     }
-    // recv threads
-    std::vector<std::thread> threads;
+    
+    
     packet pkt_recv;
     threads.push_back(std::thread(produce, std::ref(client)));
     threads.push_back(std::thread(consume, std::ref(pkt_recv)));
-    threads.push_back(std::thread(sendInput, std::ref(client)));
+    
+    // threads.push_back(std::thread(sendInput, std::ref(client)));
     for(auto& t : threads) { t.join(); }
     
     packet pkt(req_Exit);
     client.msend(pkt);
     close(client.fd);
     return 0;
+}
+void send100(mySocket& skt){
+    packet pkt(req_Time);
+    for(int i = 0 ; i< 100 ;++i)
+    {
+        skt.msend(pkt);
+        usleep(50000);
+    }
 }
 void sendInput(mySocket &skt) {
     while (!should_exit) {
@@ -73,8 +87,15 @@ void sendInput(mySocket &skt) {
         std::cout << "client> ";
         std::getline(std::cin, input);
 
-        if (input == "reconnect") {
-            reconnect(skt);
+        if (input == "connect") {
+            struct sockaddr_in serverAddress;
+            std::string addr;
+            int port;
+            std::cout << "server IP address: ";
+            std::cin >> addr;
+            std::cout << "server IP port: ";
+            std::cin >> port;
+            myconnect(skt, addr, port);
             continue;
         }
         if (input == "u" || command_packet_type[input] == pkt_t::req_Unconnect) {
@@ -113,27 +134,33 @@ void sendInput(mySocket &skt) {
 void produce(mySocket &skt) {
     while (!should_exit) {
         packet pkt;
-        size_t len;
+        int num;
+
+        std::unique_lock<std::mutex> waitLock(waitMtx);
+        while (!is_connected && !should_exit) {
+            waitCond.wait(waitLock);
+        }
 
         // Receive packet
-        len = skt.mrecv(pkt);
-        if (len == -1) {
+        num = skt.mrecv(pkt);
+        if (num == -1) {
             std::cout << "Unconnected!" << std::endl;
             // Wait for reconnection or exit signal
             std::unique_lock<std::mutex> waitLock(waitMtx);
-            while (!should_reconnect && !should_exit) {
+            while (!is_connected && !should_exit) {
                 waitCond.wait(waitLock);
             }
             continue;
         }
-        if (len == 0) {
+        if (num == 0) {
             continue;
         }
         if (should_exit) return;
 
         // Acquire lock only when we have a valid packet
         std::unique_lock<std::mutex> msgLock(mtx);
-        msgQueue.push(pkt);
+        for(int i = 0; i < num; i++) 
+            msgQueue.push(pkt);
         response.notify_all();  
     }
 }
@@ -149,11 +176,16 @@ void consume(packet &pkt) {
         if (should_exit) return;
 
         // Get response from queue and output it
-        pkt = msgQueue.front();
-        msgQueue.pop();
+        int num = 0;
+        while(msgQueue.size() > 0) {
+            pkt = msgQueue.front();
+            msgQueue.pop();
+            num++;
+        }
 
         // Print packet info outside the critical section to reduce lock contention
         msgLock.unlock();
+        std::cout << "Received " << num << " packets" << std::endl;
         print_pkt_info(pkt);
     }
 }
@@ -197,15 +229,15 @@ void print_pkt_info(packet &pkt) {
     std::cout << std::string(total_width, '-') << std::endl;
 }
 
-void reconnect(mySocket &skt) {
-    std::cout << "Reconnecting..." << std::endl;
-    struct sockaddr_in serverAddress;
-    // set server addr
-    set_SocketAddr(&serverAddress, SERVER_PORT, SERVER_ADDRESS);
-    skt.mconnect(&serverAddress);
+void myconnect(mySocket &skt, std::string addr, int port) {
+    std::cout << "Connecting..." << std::endl;
+
+    struct sockaddr_in serveraddr;
+    set_SocketAddr(&serveraddr, port, addr);
+    skt.mconnect(&serveraddr);
 
     std::lock_guard<std::mutex> lock(waitMtx);
-    should_reconnect = true;
+    is_connected = true;
     waitCond.notify_all();
 }
 void exitHandler(int signal) {

@@ -1,12 +1,13 @@
 #include "server.hpp"
-void clientHandler(mySocket &server, int client_fd);
-void funcHandler1(packet& pkt_send);
-void funcHandler2(packet& pkt_send);
-void funcHandler3(packet& pkt_send);
-void funcHandler4(packet& pkt_send);
-void funcHandler5(packet& pkt_send, int result);
-void funcHandler6(packet& pkt_send, mySocket& skt);
+void clientHandler(int client_fd);
+void test2Handler(int client_fd, std::string& buf);
+void test3Handler(int client_fd, HTTPRequest& req);
+void test4Handler(int client_fd, HTTPRequest& req);
+void getHandler(int client_fd, HTTPRequest& req);
+void postHandler(int client_fd, HTTPRequest& req);
 bool isConnected(int sockfd);
+void clientHandler2(int client_fd);
+
 
 int main(int argc, char* argv[]) {
     // init glog
@@ -27,6 +28,7 @@ int main(int argc, char* argv[]) {
         << "[Error] Listening failed";
     std::cout << "Listening..." << std::endl;
     std::vector<std::thread> client_threads;
+
     while(1)
     {
         int client = accept(server.fd, (struct sockaddr*)&clientaddr, &clientaddrlen);
@@ -34,89 +36,117 @@ int main(int argc, char* argv[]) {
             std::cout << "[Info] Client " 
             << client << ", addr: " << std::string(inet_ntoa(clientaddr.sin_addr)) << ":" 
             << ntohs(clientaddr.sin_port) << " has connected" << std::endl;
+
             server.client_fd_list.push_back(client);
-            client_threads.emplace_back(clientHandler, std::ref(server), client);
+
+            std::thread t(clientHandler, client);
+            t.detach();
+            // client_threads.emplace_back(clientHandler2, client, 4);
         }
     }
     std::cout << "Main finished" << std::endl;
+    return 0;
 }
 
-void clientHandler(mySocket &server, int client_fd) {
+void clientHandler2(int client_fd) {
     char buf[4096] = {0};
-    while(isConnected(client_fd)) {
-        LOG_IF(FATAL, recv(client_fd, buf, sizeof(buf)-1, 0) < 0) << "recv error" << std::endl;
+    // while(1) {
+        auto result = recv(client_fd, buf, sizeof(buf)-1, 0);
         
+        std::cout << "recv: " << result << std::endl;
         std::string buf_str(buf);
         HTTPRequest req(buf_str);
-        std::string version = "HTTP/1.1";
-        std::string reasonPhrase;
-        int code;
+        test4Handler(client_fd, req);
+    // }
+    close(client_fd);
+}
+void clientHandler(int client_fd) {
+    char buf[4096] = {0};
+    
+        recv(client_fd, buf, sizeof(buf)-1, 0);
+        std::string buf_str(buf);
+        HTTPRequest req(buf_str);
+        
+        std::string version = "HTTP/1.0";
+        int code = 200;
+        std::string reasonPhrase = "OK";
         if(req.method == "GET") {
-            if(url2path.find(req.url) != url2path.end()) {
-                code = 200;
-                reasonPhrase = "OK";
-            } else {
-                code = 404;
-                reasonPhrase = "Not Found";
-            }
+            HTTPResponse res(version, code, reasonPhrase, req);
+            
+            send(client_fd, res.serialize().c_str(), res.serialize().size(), 0);
         } else if (req.method == "POST") {
-            if(req.url == "/dopost") {
-                code = 200;
-                reasonPhrase = "OK";
-            } else {
-                code = 404;
-                reasonPhrase = "Not Found";
-            }
+            HTTPResponse res(version, code, reasonPhrase, req);
+            send(client_fd, res.serialize().c_str(), res.serialize().size(), 0);
         }
-        std::string null_str;
-        HTTPResponse res(version, code, reasonPhrase, 
-            ((code == 200 && req.method == "GET") 
-            ? url2path[req.url] 
-            : null_str));
+    
+    close(client_fd);
+}
 
-        LOG_IF(FATAL, send(client_fd, res.serialize().c_str(), res.serialize().size(), 0) < 0) 
+
+void getHandler(int client_fd, HTTPRequest& req) {
+    std::string version = "HTTP/1.1";
+    int code;
+    std::string reasonPhrase;
+    if(url2path.find(req.url) != url2path.end()) {
+        code = 200;
+        reasonPhrase = "OK";
+    } else {
+        code = 404;
+        reasonPhrase = "Not Found";
+    }
+    HTTPResponse res(version, code, reasonPhrase, req);
+    LOG_IF(FATAL, send(client_fd, res.serialize().c_str(), res.serialize().size(), 0) < 0) 
         << "client " << client_fd << " send error: " << strerror(errno) << std::endl;
+
+}
+void postHandler(int client_fd, HTTPRequest& req) {
+    std::string version = "HTTP/1.1";
+    int code;
+    std::string reasonPhrase;
+    if(req.url == "/dopost") {
+        code = 200;
+        reasonPhrase = "OK";
+    } else {
+        code = 404;
+        reasonPhrase = "Not Found";
     }
-    std::cout << "client closed: " << client_fd << std::endl;
+    HTTPResponse res(version, code, reasonPhrase);
+    LOG_IF(FATAL, send(client_fd, res.serialize().c_str(), res.serialize().size(), 0) < 0) 
+        << "client " << client_fd << " send error: " << strerror(errno) << std::endl;
+
 }
 
-void funcHandler1(packet& pkt_send) {
-    // Get current server time
-    std::time_t now = std::time(nullptr);
-    char buffer[80] = {0};
-    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
-    pkt_send.set_type(pkt_t::res);
-    pkt_send.set_num(1);
-    pkt_send.set_field("time", buffer);
+// request header + request line
+void test2Handler(int client_fd, std::string& buf) { 
+    size_t pos1 = buf.find_first_of("\r\n");
+    size_t pos2 = buf.find_first_of("\r\n\r\n");
+    std::string response = "HTTP/1.0 200 OK\r\nConnection: close\r\n\r\n";
+    response += buf.substr(pos1+2, pos2-pos1-2);
+    response += buf.substr(0, pos1);
+    response += "\r\n";
+    std::cout << response << std::endl;
+    send(client_fd, response.c_str(), response.size(), 0);
 }
-void funcHandler2(packet& pkt_send) {
-    pkt_send.set_type(pkt_t::res);
-    pkt_send.set_num(1);
-    pkt_send.set_field("server_name", "server1");
+// web echo
+void test3Handler(int client_fd, HTTPRequest& req) { 
+    std::string version = "HTTP/1.0";
+    int code = 200;
+    std::string reasonPhrase = "OK";
+    std::string content_type = req.get_content_type();
+    size_t content_length = req.get_content_length();
+    std::string content = req.get_content_in_string();
+    HTTPResponse res(version, code, reasonPhrase,
+                     content_type, content_length, content);
+    send(client_fd, res.serialize().c_str(), res.serialize().size(), 0);
 }
-void funcHandler3(packet& pkt_send) {
-    pkt_send.set_type(pkt_t::res);
-    pkt_send.set_num(1);
-    pkt_send.set_field("exit", "success");
+// path echo
+void test4Handler(int client_fd, HTTPRequest& req) { 
+    std::string version = "HTTP/1.0";
+    HTTPResponse res(version, req);
+    std::cout << res.serialize() << std::endl;
+    auto result = send(client_fd, res.serialize().c_str(), res.serialize().size(), 0);
+    std::cout << "send: " << result << std::endl;
 }
-void funcHandler4(packet& pkt_send) {
-    pkt_send.set_type(pkt_t::res);
-    pkt_send.set_num(1);
-    pkt_send.set_field("unconnnect", "success");
-}
-void funcHandler5(packet& pkt_send, int result) {
-    pkt_send.set_type(pkt_t::res);
-    pkt_send.set_num(1);
-    pkt_send.set_field("result", result ? "success" : "fail");
-}
-void funcHandler6(packet& pkt_send, mySocket &skt) {
-    pkt_send.set_type(pkt_t::res);
-    pkt_send.set_num(skt.client_fd_list.size());
-    for (auto client_fd : skt.client_fd_list) {
-        pkt_send.set_field(std::string("client ")+std::to_string(client_fd), std::to_string(client_fd));
-    }
-}
-
 bool isConnected(int sockfd) {
     int error = 0;
     socklen_t len = sizeof(error);

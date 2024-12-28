@@ -18,6 +18,7 @@
 #include <csignal> // exit signal handling
 #include <cerrno> // 包含 errno 和 strerror
 #include <poll.h>
+#include <fstream>
 
 // 定义服务端地址和端口
 #define SERVER_ADDRESS "127.0.0.1"

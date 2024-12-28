@@ -49,17 +49,20 @@ void clientHandler(mySocket &server, int client_fd) {
             close(client_fd);
             break;
         }
-        while(server.mrecv(pkt_recv, client_fd) == 0);
+        int num;
+        while((num=server.mrecv(pkt_recv, client_fd)) == 0);
         switch (pkt_recv.type)
         {
         case pkt_t::req_Time:
             funcHandler1(pkt_send);
-            server.msend(pkt_send, client_fd);
+            for(int i = 0 ; i < num ; i++)
+                server.msend(pkt_send, client_fd);
             break;
 
         case pkt_t::req_ServerName:
             funcHandler2(pkt_send);
-            server.msend(pkt_send, client_fd);
+            for(int i = 0 ; i < num ; i++)
+                server.msend(pkt_send, client_fd);
             break;    
 
         case pkt_t::req_Exit:
@@ -77,7 +80,8 @@ void clientHandler(mySocket &server, int client_fd) {
             return;
         case pkt_t::req_Msg:
             funcHandler5(pkt_send, std::find(server.client_fd_list.begin(), server.client_fd_list.end(), std::stoi(pkt_recv.get_field("to"))) != server.client_fd_list.end());
-            server.msend(pkt_send, client_fd);
+            for(int i = 0 ; i < num ; i++)
+                server.msend(pkt_send, client_fd);
             if(pkt_send.field_map["result"] == "success") {
                 pkt_recv.set_num(pkt_recv.field_num+1);
                 pkt_recv.set_field("from", std::to_string(client_fd));
@@ -86,13 +90,15 @@ void clientHandler(mySocket &server, int client_fd) {
             break;
         case pkt_t::req_ClientList:
             funcHandler6(pkt_send, server);
-            server.msend(pkt_send, client_fd);
+            for(int i = 0 ; i < num ; i++)    
+                server.msend(pkt_send, client_fd);
             break;
         case pkt_t::req_SelfFd:
             pkt_send.set_type(pkt_t::res);
             pkt_send.set_num(1);
             pkt_send.set_field("self_fd", std::to_string(client_fd));
-            server.msend(pkt_send, client_fd);
+            for(int i = 0 ; i < num ; i++)
+                server.msend(pkt_send, client_fd);
             break;
         case pkt_t::res:
             break;

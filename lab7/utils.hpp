@@ -41,7 +41,7 @@ public:
 
 struct packet;
 size_t Serialize(char* buf, packet& pkt);
-void Deserialize(char* buf, packet& pkt);
+size_t Deserialize(char* buf, packet& pkt);
 
 void set_SocketAddr(struct sockaddr_in* sock_addr, uint16_t port, std::string addr_str) {
     memset(sock_addr, 0, sizeof(sock_addr));
@@ -51,7 +51,7 @@ void set_SocketAddr(struct sockaddr_in* sock_addr, uint16_t port, std::string ad
 }
 
 enum pkt_t {Unknown, req_Unconnect, req_Time, req_ServerName, 
-            req_ClientList, req_Msg, req_Exit, req_SelfFd, res};
+            req_ClientList, req_Msg, req_Exit, req_SelfFd, res, Connect};
 
 struct packet{
     pkt_t type;
@@ -74,7 +74,6 @@ struct packet{
     void set_num(size_t num) { field_num = num; } 
     void set_field(std::string field_name, std::string field_value) {
         if (field_map.find(field_name) != field_map.end()) {
-            std::cout << "[Info] already set this field!" << std::endl;
             return;
         }
         field_map[field_name] = field_value;
@@ -200,7 +199,7 @@ struct mySocket
 
 
     // *FOR CLIENT* receive and store packet into PKT, return received length(in bytes)
-    size_t mrecv(packet& pkt) {
+    int mrecv(packet& pkt) {
         if (!isConnected(fd)) {
             std::cerr << "[Error] Socket is not connected!" << std::endl;
             return -1;
@@ -208,29 +207,39 @@ struct mySocket
         
         if(!has_data_poll(fd)) return 0; // check if there is data to receive
 
-        char buf[2048] = {0};
+        char buf[8192] = {0};
         ssize_t len = recv(fd, buf, sizeof(buf) - 1, 0);
         
+        static int num = 0;
+
         if(len < 0) {
             std::cout << "[Error] receive failed!" << "errno: " << strerror(errno) << std::endl;
         } else {
             // std::cout << std::endl << "--------------receive--------------" << std::endl;
             // std::cout << "recv length:" << len << std::endl;
+            size_t read_len = 0;
+            
+            while(read_len < len)
+            {
+                read_len += Deserialize(buf, pkt);
+                ++num;
+            }
             Deserialize(buf, pkt);
         }
         // std::cout << "---------------over----------------" << std::endl << std::endl;
-        return len;
+        return num;
     }
-    // *FOR SERVER* receive and store packet into PKT, return received length(in bytes)
-    size_t mrecv(packet& pkt, int client_fd) {
+    // *FOR SERVER* receive and store packet into PKT, return received packet number
+    int mrecv(packet& pkt, int client_fd) {
         if (!isConnected(client_fd)) {
             std::cerr << "[Error] Socket is not connected!" << std::endl;
             return -1;
         }
 
         if(!has_data_poll(client_fd)) return 0; // check if there is data to receive
-
-        char buf[2048] = {0};
+        
+        int num = 0;
+        char buf[8192] = {0};
         ssize_t len = recv(client_fd, buf, sizeof(buf) - 1, 0);
         
         if(len < 0) {
@@ -239,10 +248,17 @@ struct mySocket
             // std::cout << std::endl << "--------------receive--------------" << std::endl;
             // std::cout << "recv from client " << client_fd << std::endl;
             // std::cout << "recv length:" << len << std::endl;
-            Deserialize(buf, pkt);
+            size_t read_len = 0;
+            
+            while(read_len < len)
+            {
+                read_len += Deserialize(buf, pkt);
+                ++num;
+            }
+            
         }
         // std::cout << "---------------over----------------" << std::endl << std::endl;
-        return len;
+        return num;
     }
 
 
@@ -285,30 +301,32 @@ size_t Serialize(char* buf, packet& pkt) {
 }
 
 // deserialize BUF into PKT
-void Deserialize(char* buf, packet& pkt) {
+size_t Deserialize(char* buf, packet& pkt) {
     pkt_t type;
-    memcpy(&type, buf, sizeof(type));
+    size_t len = 0;
+    memcpy(&type, buf+len, sizeof(type));
     pkt.set_type(type);
-    buf += sizeof(pkt.type);
+    len += sizeof(pkt.type);
 
     size_t field_num;
-    memcpy(&field_num, buf, sizeof(pkt.field_num));
+    memcpy(&field_num, buf+len, sizeof(pkt.field_num));
     pkt.set_num(field_num);
-    buf += sizeof(pkt.field_map.size());
+    len += sizeof(pkt.field_map.size());
 
     for(int i = 0 ; i < pkt.field_num ; ++i) {
         size_t name_len;
         size_t val_len;
-        memcpy(&name_len, buf, sizeof(name_len));
-        buf += sizeof(name_len);
-        memcpy(&val_len, buf, sizeof(val_len));
-        buf += sizeof(val_len);
+        memcpy(&name_len, buf+len, sizeof(name_len));
+        len += sizeof(name_len);
+        memcpy(&val_len, buf+len, sizeof(val_len));
+        len += sizeof(val_len);
         
         std::string name, val;
-        for(int j = 0 ; j < name_len + val_len ; ++buf, ++j) {
-            if(j < name_len) name += buf[0];
-            else val += buf[0];
+        for(int j = 0 ; j < name_len + val_len ; ++len, ++j) {
+            if(j < name_len) name += buf[len];
+            else val += buf[len];
         }
         pkt.set_field(name, val);
     }
+    return len;
 }
