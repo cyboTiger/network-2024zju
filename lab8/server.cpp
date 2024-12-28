@@ -68,7 +68,11 @@ void clientHandler(mySocket &server, int client_fd) {
                 reasonPhrase = "Not Found";
             }
         }
-        HTTPResponse res(version, code, reasonPhrase, url2path[req.url]);
+        std::string null_str;
+        HTTPResponse res(version, code, reasonPhrase, 
+            ((code == 200 && req.method == "GET") 
+            ? url2path[req.url] 
+            : null_str));
 
         LOG_IF(FATAL, send(client_fd, res.serialize().c_str(), res.serialize().size(), 0) < 0) 
         << "client " << client_fd << " send error: " << strerror(errno) << std::endl;
