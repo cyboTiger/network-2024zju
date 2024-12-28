@@ -45,13 +45,16 @@ void clientHandler(mySocket &server, int client_fd) {
     while(1) {
         recv(client_fd, buf, sizeof(buf)-1, 0);
         std::string buf_str(buf);
-        HTTPRequest req(buf_str);
-        std::string version = "HTTP/1.1";
-        std::string reasonPhrase = "OK";
-        HTTPResponse res(version, 200, reasonPhrase, req);
-        std::cout << "send to client " << client_fd << std::endl;
-        send(client_fd, res.serialize().c_str(), res.serialize().size(), 0);
-    }
+        size_t pos1 = buf_str.find_first_of("\r\n");
+        size_t pos2 = buf_str.find_first_of("\r\n\r\n");
+        std::string req_line = buf_str.substr(0, pos1);
+        std::string req_header = buf_str.substr(pos1+2, pos2-pos1-2);
+        std::string res = "HTTP/1.0 200 OK\r\nConnection: close\r\n\r\n" ;
+        res += req_header;
+        res += req_line;
+        send(client_fd, res.c_str(), res.length(), 0);
+        
+    } 
     close(client_fd); 
 }
 void funcHandler1(packet& pkt_send) {
