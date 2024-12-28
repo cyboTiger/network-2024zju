@@ -6,6 +6,7 @@ void funcHandler3(packet& pkt_send);
 void funcHandler4(packet& pkt_send);
 void funcHandler5(packet& pkt_send, int result);
 void funcHandler6(packet& pkt_send, mySocket& skt);
+bool isConnected(int sockfd);
 
 int main(int argc, char* argv[]) {
     // init glog
@@ -36,24 +37,29 @@ int main(int argc, char* argv[]) {
             server.client_fd_list.push_back(client);
             client_threads.emplace_back(clientHandler, std::ref(server), client);
         }
-
     }
+    std::cout << "Main finished" << std::endl;
 }
 
 void clientHandler(mySocket &server, int client_fd) {
     char buf[4096] = {0};
-    while(1) {
-        recv(client_fd, buf, sizeof(buf)-1, 0);
+    while(isConnected(client_fd)) {
+        LOG_IF(FATAL, recv(client_fd, buf, sizeof(buf)-1, 0) < 0) << "recv error" << std::endl;
+        
         std::string buf_str(buf);
         HTTPRequest req(buf_str);
         std::string version = "HTTP/1.1";
         std::string reasonPhrase = "OK";
         HTTPResponse res(version, 200, reasonPhrase, req);
-        std::cout << "send to client " << client_fd << std::endl;
-        send(client_fd, res.serialize().c_str(), res.serialize().size(), 0);
+        std::string res_str = res.serialize();
+        std::cout << std::endl << "client " << client_fd << ": \n" << res_str << std::endl << std::endl;
+
+        LOG_IF(FATAL, send(client_fd, res.serialize().c_str(), res.serialize().size(), 0) < 0) 
+        << "client " << client_fd << " send error: " << strerror(errno) << std::endl;
     }
-    close(client_fd); 
+    std::cout << "client closed: " << client_fd << std::endl;
 }
+
 void funcHandler1(packet& pkt_send) {
     // Get current server time
     std::time_t now = std::time(nullptr);
@@ -91,3 +97,11 @@ void funcHandler6(packet& pkt_send, mySocket &skt) {
     }
 }
 
+bool isConnected(int sockfd) {
+    int error = 0;
+    socklen_t len = sizeof(error);
+    if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
+        close(sockfd);
+    }
+    return error == 0;
+}

@@ -1,5 +1,13 @@
 #include "utils.hpp"
 #define MAX_CLIENT_QUEUE 20
+void case_conversion(std::string& str) {
+    for (auto& c : str) {
+        if (c >= 'A' && c <= 'Z') {
+            c += 'a' - 'A';
+        }
+    }
+}
+
 class HTTPRequest {
 private: // Necessary data elements
     // request line
@@ -20,19 +28,20 @@ public:
         std::getline(ss, req_file, ' ');
         std::getline(ss, http_version);
 
-        while(std::getline(ss, line)) {
+        std::getline(ss, line);
+        while(line != "\r") {
             std::stringstream ss2(line);
             std::string key, value;
             std::getline(ss2, key, ':');
             std::getline(ss2, value);
-            field_map[key] = value;
+            case_conversion(key);
+            if(key == "content-length" || key == "content-type") {
+                field_map[key] = value;
+            }
+            std::getline(ss, line);
         }
-        
         update_content_attr();
-        char buf[content_length+1];
-        ss.read(buf, content_length);
-        buf[content_length] = '\0';
-        content = std::string(buf);
+        std::getline(ss, content); 
     }
     const std::string& get_content_in_string() const {
         return content;
@@ -44,18 +53,10 @@ public:
         return content_type;
     }
     void update_content_attr() {
-        if(field_map.find("Content-Length") != field_map.end())
-            content_length = std::stoi(field_map["Content-Length"]);
-        else if(field_map.find("Content-length") != field_map.end())
-            content_length = std::stoi(field_map["Content-length"]);
-        else if(field_map.find("content-length") != field_map.end())
+        if(field_map.find("content-length") != field_map.end())
             content_length = std::stoi(field_map["content-length"]);
 
-        if(field_map.find("Content-Type") != field_map.end())
-            content_type = field_map["Content-Type"];
-        else if(field_map.find("Content-type") != field_map.end())
-            content_type = field_map["Content-type"];
-        else if(field_map.find("content-type") != field_map.end())
+        if(field_map.find("content-type") != field_map.end())
             content_type = field_map["content-type"];
     }
         
