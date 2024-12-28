@@ -49,10 +49,26 @@ void clientHandler(mySocket &server, int client_fd) {
         std::string buf_str(buf);
         HTTPRequest req(buf_str);
         std::string version = "HTTP/1.1";
-        std::string reasonPhrase = "OK";
-        HTTPResponse res(version, 200, reasonPhrase, req);
-        std::string res_str = res.serialize();
-        std::cout << std::endl << "client " << client_fd << ": \n" << res_str << std::endl << std::endl;
+        std::string reasonPhrase;
+        int code;
+        if(req.method == "GET") {
+            if(url2path.find(req.url) != url2path.end()) {
+                code = 200;
+                reasonPhrase = "OK";
+            } else {
+                code = 404;
+                reasonPhrase = "Not Found";
+            }
+        } else if (req.method == "POST") {
+            if(req.url == "/dopost") {
+                code = 200;
+                reasonPhrase = "OK";
+            } else {
+                code = 404;
+                reasonPhrase = "Not Found";
+            }
+        }
+        HTTPResponse res(version, code, reasonPhrase, url2path[req.url]);
 
         LOG_IF(FATAL, send(client_fd, res.serialize().c_str(), res.serialize().size(), 0) < 0) 
         << "client " << client_fd << " send error: " << strerror(errno) << std::endl;

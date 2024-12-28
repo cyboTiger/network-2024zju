@@ -1,5 +1,12 @@
 #include "utils.hpp"
 #define MAX_CLIENT_QUEUE 20
+std::map<std::string, std::string> url2path =
+{
+    std::make_pair("/index.html","/html/test.html"),
+    std::make_pair("/index_noimg.html","/html/noimg.html"),
+    std::make_pair("/info/server","/txt/test.txt"),
+    std::make_pair("/assets/logo.jpg","/img/logo.jpg")
+};
 void case_conversion(std::string& str) {
     for (auto& c : str) {
         if (c >= 'A' && c <= 'Z') {
@@ -10,22 +17,23 @@ void case_conversion(std::string& str) {
 
 class HTTPRequest {
 private: // Necessary data elements
-    // request line
-    std::string method;
-    std::string req_file;
-    std::string http_version;
+    
     // request header
     std::map<std::string, std::string> field_map;
     size_t content_length;
     std::string content_type;
     std::string content;
 public:
+    // request line
+    std::string method;
+    std::string url;
+    std::string http_version;
     HTTPRequest(std::string& is) : content_length(0) {
         std::stringstream ss(is);
         std::string line;
         std::getline(ss, line);
         std::getline(ss, method, ' ');
-        std::getline(ss, req_file, ' ');
+        std::getline(ss, url, ' ');
         std::getline(ss, http_version);
 
         std::getline(ss, line);
@@ -83,6 +91,11 @@ public:
         field_map["Content-Type"] = req.get_content_type();
         field_map["Content-Length"] = std::to_string(req.get_content_length());
         content = req.get_content_in_string();
+    }
+    HTTPResponse(std::string& version, int code, std::string& reasonPhrase, std::string& path) 
+    : version(version), code(code), reasonPhrase(reasonPhrase),content(path) {
+        field_map["Content-Type"] = "text/plain";
+        field_map["Content-Length"] = std::to_string(content.size());
     }
     std::string serialize() const {
         std::stringstream ss;
